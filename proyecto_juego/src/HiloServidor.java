@@ -2,6 +2,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.security.*;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,6 +52,7 @@ public class HiloServidor extends Thread{
                 outputStream.writeObject(error);
             } while (error.equalsIgnoreCase("Datos correctos"));
 
+            String result = "";
             //Enviar las reglas del juego firmadas, do while(!firmaVerificada)
             do {
                 String reglas = "Las reglas del juego son las siguientes:\n" +
@@ -58,11 +61,94 @@ public class HiloServidor extends Thread{
                         "   --> En cualquier momento puedes escribir por teclado 'end' para terminar la partida.\n" +
                         "   --> Una partida consta de 10 rondas de preguntas.\n" +
                         "¡Disfruta del juego!!!\n";
-            } while (true);
+
+                try {
+                    KeyPairGenerator generador;
+
+                    generador = KeyPairGenerator.getInstance("RSA");
+
+                    //System.out.println("Generando par de claves");
+                    KeyPair par = generador.generateKeyPair();
+
+                    PublicKey publicKey= par.getPublic();
+                    PrivateKey privateKey = par.getPrivate();
+
+                    //Se envía la clave pública
+                    outputStream.writeObject(publicKey);
+
+                    Signature dsa = Signature.getInstance("SHA1withRSA");
+                    dsa.initSign(privateKey);
+                    dsa.update(reglas.getBytes());
+                    byte[] firma = dsa.sign();
+                    //Se envían las reglas firmadas
+                    outputStream.writeObject(firma);
+
+                    result = inputStream.readObject().toString();
+
+                } catch (NoSuchAlgorithmException | SignatureException | InvalidKeyException e) {
+                    e.printStackTrace();
+                }
+
+
+            } while (!result.equalsIgnoreCase("verificado"));
 
             //Enviar preguntas hasta que el jugador responda 'end'
+            String resultado = "";
+            int operacion = -1;
+            Random r = new Random();
+            int num1 = 0, num2 = 0, res = 0, dev = 0, total = 0;
+
+
+            do {
+                operacion = r.nextInt(2);
+                switch (operacion){
+                    case 0:
+                        System.out.println("Suma");
+                        num1 = r.nextInt(150);
+                        num2 = r.nextInt(150);
+                        System.out.println("Suma " + num1 + " + " + num2 + " y envía el resultado");
+                        res = num1 + num2;
+                        if ( res == dev){
+                            total += 10;
+                        } else {
+                            total -= 5;
+                        }
+                        contador += 1;
+                        break;
+                    case 1:
+                        System.out.println("Resta");
+                        num1 = r.nextInt(100);
+                        num2 = r.nextInt(100);
+                        System.out.println("Resta " + num1 + " - " + num2 + " y envía el resultado");
+                        res = num1 - num2;
+                        if ( res == dev){
+                            total += 10;
+                        } else {
+                            total -= 5;
+                        }
+                        contador += 1;
+                        break;
+                    case 2:
+                        System.out.println("Multiplicación");
+                        num1 = r.nextInt(50);
+                        num2 = r.nextInt(50);
+                        System.out.println("Multiplica " + num1 + " * " + num2 + " y envía el resultado");
+                        res = num1 * num2;
+                        if ( res == dev){
+                            total += 10;
+                        } else {
+                            total -= 5;
+                        }
+                        contador += 1;
+                        break;
+                    default:
+                        break;
+                }
+
+            } while (!resultado.equalsIgnoreCase("end") || contador >= 10);
 
             //Enviar la puntuación total
+            System.out.println("Puntuación total --> " + total);
 
         } catch (IOException e) {
             e.printStackTrace();
