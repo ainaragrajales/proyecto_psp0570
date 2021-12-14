@@ -18,6 +18,8 @@ public class HiloServidor extends Thread{
     @Override
     public void run() {
 
+        // igual se puede hacer un login con base de datos sqlite y se pregunta si tiene ya cuenta o quiere crear una,
+        // además de comprobar que el mismo jugador no esté en dos partidas a la vez
         try {
             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
@@ -25,11 +27,13 @@ public class HiloServidor extends Thread{
             int contador = 0;
 
             String conectar = "Devuelve los siguientes datos: nombre, apellido, edad, usuario y contraseña";
+            //Envía la petición de los datos del jugador
             outputStream.writeObject(conectar);
-            String error = "Introduce de nuevo: ";
+            String error = "";
             //Comprobar los datos del jugador
             do {
 
+                //Recibe los datos del jugador
                 Jugador jugador = (Jugador) inputStream.readObject();
                 if (!comprobarNombre(jugador.getNombre())){
                     error += "el nombre ";
@@ -46,9 +50,10 @@ public class HiloServidor extends Thread{
                 if (!comprobarPasswd(jugador.getPasswd())){
                     error += "la contraseña";
                 }
-                if (error.equalsIgnoreCase("Introduce de nuevo: ")){
+                if (error.equalsIgnoreCase("")){
                     error = "Datos correctos";
                 }
+                //Envía si hay algun error con algún dato
                 outputStream.writeObject(error);
             } while (error.equalsIgnoreCase("Datos correctos"));
 
@@ -75,6 +80,8 @@ public class HiloServidor extends Thread{
 
                     //Se envía la clave pública
                     outputStream.writeObject(publicKey);
+                    //Se envían las reglas sin firmar
+                    outputStream.writeObject(reglas);
 
                     Signature dsa = Signature.getInstance("SHA1withRSA");
                     dsa.initSign(privateKey);
@@ -82,7 +89,7 @@ public class HiloServidor extends Thread{
                     byte[] firma = dsa.sign();
                     //Se envían las reglas firmadas
                     outputStream.writeObject(firma);
-
+                    //recibe si se han verificado las reglas
                     result = inputStream.readObject().toString();
 
                 } catch (NoSuchAlgorithmException | SignatureException | InvalidKeyException e) {
@@ -93,10 +100,10 @@ public class HiloServidor extends Thread{
             } while (!result.equalsIgnoreCase("verificado"));
 
             //Enviar preguntas hasta que el jugador responda 'end'
-            String resultado = "";
-            int operacion = -1;
+            String resultado = "", pregunta;
+            int operacion;
             Random r = new Random();
-            int num1 = 0, num2 = 0, res = 0, dev = 0, total = 0;
+            int num1, num2, res, dev = 0, total = 0;
 
 
             do {
@@ -108,12 +115,21 @@ public class HiloServidor extends Thread{
                         num2 = r.nextInt(150);
                         System.out.println("Suma " + num1 + " + " + num2 + " y envía el resultado");
                         res = num1 + num2;
-                        if ( res == dev){
-                            total += 10;
-                        } else {
-                            total -= 5;
+                        pregunta = "Suma " + num1 + " + " + num2 + " y envía el resultado";
+                        //Envia la operación
+                        outputStream.writeObject(pregunta);
+                        //Recibe el resultado
+                        resultado = inputStream.readObject().toString();
+                        if (!resultado.equalsIgnoreCase("end")){
+                            dev = Integer.parseInt(resultado);
+                            if ( res == dev){
+                                total += 10;
+                            } else {
+                                total -= 5;
+                            }
+                            contador += 1;
                         }
-                        contador += 1;
+
                         break;
                     case 1:
                         System.out.println("Resta");
@@ -121,12 +137,20 @@ public class HiloServidor extends Thread{
                         num2 = r.nextInt(100);
                         System.out.println("Resta " + num1 + " - " + num2 + " y envía el resultado");
                         res = num1 - num2;
-                        if ( res == dev){
-                            total += 10;
-                        } else {
-                            total -= 5;
+                        pregunta = "Resta " + num1 + " - " + num2 + " y envía el resultado";
+                        //Envia la operación
+                        outputStream.writeObject(pregunta);
+                        //Recibe el resultado
+                        resultado = inputStream.readObject().toString();
+                        if (!resultado.equalsIgnoreCase("end")){
+                            dev = Integer.parseInt(resultado);
+                            if ( res == dev){
+                                total += 10;
+                            } else {
+                                total -= 5;
+                            }
+                            contador += 1;
                         }
-                        contador += 1;
                         break;
                     case 2:
                         System.out.println("Multiplicación");
@@ -134,12 +158,20 @@ public class HiloServidor extends Thread{
                         num2 = r.nextInt(50);
                         System.out.println("Multiplica " + num1 + " * " + num2 + " y envía el resultado");
                         res = num1 * num2;
-                        if ( res == dev){
-                            total += 10;
-                        } else {
-                            total -= 5;
+                        pregunta = "Multiplica " + num1 + " * " + num2 + " y envía el resultado";
+                        //Envia la operación
+                        outputStream.writeObject(pregunta);
+                        //Recibe el resultado
+                        resultado = inputStream.readObject().toString();
+                        if (!resultado.equalsIgnoreCase("end")){
+                            dev = Integer.parseInt(resultado);
+                            if ( res == dev){
+                                total += 10;
+                            } else {
+                                total -= 5;
+                            }
+                            contador += 1;
                         }
-                        contador += 1;
                         break;
                     default:
                         break;
@@ -147,12 +179,12 @@ public class HiloServidor extends Thread{
 
             } while (!resultado.equalsIgnoreCase("end") || contador >= 10);
 
-            //Enviar la puntuación total
-            System.out.println("Puntuación total --> " + total);
 
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
+            System.out.println("Puntuación total --> " + total);
+            //Enviar la puntuación total
+            outputStream.writeObject(total);
+
+        } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
 
@@ -160,31 +192,31 @@ public class HiloServidor extends Thread{
     }
     public boolean comprobarNombre(String nombre){
         Pattern pattern = Pattern.compile("[a-zA-z]{4,20}");
-        Matcher matcher = null;
+        Matcher matcher;
         matcher = pattern.matcher(nombre);
         return matcher.find();
     }
     public boolean comprobarApellido(String apellido){
         Pattern pattern = Pattern.compile("[a-zA-z]{4,40}");
-        Matcher matcher = null;
+        Matcher matcher;
         matcher = pattern.matcher(apellido);
         return matcher.find();
     }
     public boolean comprobarEdad(int edad){
         Pattern pattern = Pattern.compile("[0-9]{2}");
-        Matcher matcher = null;
+        Matcher matcher;
         matcher = pattern.matcher(String.valueOf(edad));
         return matcher.find();
     }
     public boolean comprobarUsuario(String nick){
         Pattern pattern = Pattern.compile("[a-zA-z0-9]{4,20}");
-        Matcher matcher = null;
+        Matcher matcher;
         matcher = pattern.matcher(nick);
         return matcher.find();
     }
     public boolean comprobarPasswd(String passwd){
         Pattern pattern = Pattern.compile("[a-zA-z0-9]{10,25}");
-        Matcher matcher = null;
+        Matcher matcher;
         matcher = pattern.matcher(passwd);
         return matcher.find();
     }
