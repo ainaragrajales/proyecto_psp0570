@@ -26,6 +26,7 @@ public class Servidor {
         for (int i = 0; i < 3; i++) {
 
             Socket cliente = serverSocket.accept();
+            System.out.println("Cliente conectado");
             HiloServidor hiloServidor = new HiloServidor(cliente);
             hiloServidor.start();
 

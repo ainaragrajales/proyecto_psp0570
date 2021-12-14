@@ -29,13 +29,20 @@ public class HiloServidor extends Thread{
             String conectar = "Devuelve los siguientes datos: nombre, apellido, edad, usuario y contraseña";
             //Envía la petición de los datos del jugador
             outputStream.writeObject(conectar);
-            String error = "";
-            //Comprobar los datos del jugador
-            do {
 
+            //Comprobar los datos del jugador
+            Jugador jugador = (Jugador) inputStream.readObject();
+            String bienvenida = "Bienvenido jugador " + jugador.getNombre();
+            outputStream.writeObject(bienvenida);
+            /*do {
                 //Recibe los datos del jugador
-                Jugador jugador = (Jugador) inputStream.readObject();
-                if (!comprobarNombre(jugador.getNombre())){
+
+                if (!comprobarNombre(jugador.getNombre()) || !comprobarApellido(jugador.getApellido()) || !comprobarEdad(jugador.getEdad()) || !comprobarUsuario(jugador.getUser()) || !comprobarPasswd(jugador.getPasswd())){
+                    err = false;
+                } else {
+                    err = true;
+                }
+                *//*if (!comprobarNombre(jugador.getNombre())){
                     error += "el nombre ";
                 }
                 if (!comprobarApellido(jugador.getApellido())){
@@ -54,9 +61,10 @@ public class HiloServidor extends Thread{
                     error = "Datos correctos";
                 }
                 //Envía si hay algun error con algún dato
-                outputStream.writeObject(error);
-            } while (error.equalsIgnoreCase("Datos correctos"));
-
+                outputStream.writeObject(error);*//*
+            } *//*while (error.equalsIgnoreCase("Datos correctos"));*//*
+            while (!err);
+*/
             String result = "";
             //Enviar las reglas del juego firmadas, do while(!firmaVerificada)
             do {

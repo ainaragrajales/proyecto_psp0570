@@ -15,7 +15,7 @@ public class Cliente {
         try {
 
             Socket socket = new Socket("localhost", PUERTO);
-
+            System.out.println("Cliente encendido");
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
@@ -25,9 +25,27 @@ public class Cliente {
             int edad;
             //Recibe un mensaje pidiendo los datos del jugador
             System.out.println(mensaje);
-
+            boolean err;
             Jugador jugador;
-            do {
+            System.out.println("Escribe el nombre: ");
+            nombre = scanner.nextLine();
+            System.out.println("Escribe el apellido: ");
+            apellido = scanner.nextLine();
+            System.out.println("Escribe la edad: ");
+            edad = Integer.parseInt(scanner.nextLine());
+            System.out.println("Escribe el usuario: ");
+            usuario = scanner.nextLine();
+            System.out.println("Escribe la contraseña: ");
+            contrasenia = scanner.nextLine();
+
+            jugador = new Jugador(nombre, apellido, edad, usuario, contrasenia);
+            //Envía los datos del jugador
+            out.writeObject(jugador);
+
+            String bienvenida = in.readObject().toString();
+            System.out.println(bienvenida);
+
+            /*do {
 
                 System.out.println("Escribe el nombre: \n");
                 nombre = scanner.nextLine();
@@ -45,10 +63,11 @@ public class Cliente {
                 out.writeObject(jugador);
 
                 //Recibe si hay algún error con algun dato
-                error = in.readObject().toString();
+                //error = in.readObject().toString();
+                err = (boolean) in.readObject();
 
-            } while (!error.equalsIgnoreCase("Datos correctos"));
-
+            } while (!err);
+*/
             String respuesta = "";
             do {
                 try {
