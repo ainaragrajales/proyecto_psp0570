@@ -7,7 +7,7 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class HiloServidor extends Thread{
+public class HiloServidor extends Thread {
 
     Socket socket;
 
@@ -18,55 +18,80 @@ public class HiloServidor extends Thread{
     @Override
     public void run() {
 
+        String usuarioJugador = "";
         // igual se puede hacer un login con base de datos sqlite y se pregunta si tiene ya cuenta o quiere crear una,
         // además de comprobar que el mismo jugador no esté en dos partidas a la vez
         try {
             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
-
             int contador = 0;
 
-            String conectar = "Devuelve los siguientes datos: nombre, apellido, edad, usuario y contraseña";
-            //Envía la petición de los datos del jugador
-            outputStream.writeObject(conectar);
+            Jugador jugador = new Jugador();
+            int num1, num2, res, dev, total = 0;
 
-            //Comprobar los datos del jugador
-            Jugador jugador = (Jugador) inputStream.readObject();
-            String bienvenida = "Bienvenido jugador " + jugador.getNombre();
+
+            String inicioSesion = "¿Tienes cuenta creada? s/n";
+            outputStream.writeObject(inicioSesion);
+            String resp = inputStream.readObject().toString();
+            boolean correcto = false;
+            if (resp.equalsIgnoreCase("s")){
+                while (!correcto) {
+                    String datos = "Introduce el usuario y la contraseña";
+                    outputStream.writeObject(datos);
+
+                    jugador = (Jugador) inputStream.readObject();
+                    String contr = new BBDD().mirarPassword(jugador.getUser());
+                    if (contr.equalsIgnoreCase(jugador.getPasswd())){
+                        correcto = true;
+                    } else {
+                        correcto = false;
+                    }
+                    outputStream.writeObject(correcto);
+                }
+                //Comprobar contraseña
+                //Preguntar mientras la contraseña sea incorrecta
+                usuarioJugador = jugador.getUser();
+            } else if (resp.equalsIgnoreCase("n")){
+                while (!correcto) {
+                    String conectar = "Devuelve los siguientes datos: nombre, apellido, edad, usuario y contraseña";
+                    outputStream.writeObject(conectar);
+
+                    jugador.setNombre(inputStream.readObject().toString());
+                    System.out.println(jugador.getNombre());
+
+                    jugador.setApellido(inputStream.readObject().toString());
+                    System.out.println(jugador.getApellido());
+
+                    jugador.setEdad(Integer.parseInt(inputStream.readObject().toString()));
+                    System.out.println(jugador.getEdad());
+
+                    jugador.setUser(inputStream.readObject().toString());
+                    System.out.println(jugador.getUser());
+
+                    jugador.setPasswd(inputStream.readObject().toString());
+                    System.out.println(jugador.getPasswd());
+
+                    //jugador = (Jugador) inputStream.readObject();
+
+                    //Comprobar con los patrones si los datos son correctos
+                    correcto = comprobarString(jugador.getNombre()) && comprobarString(jugador.getApellido()) &&
+                            comprobarString(jugador.getUser()) && comprobarEdad(jugador.getEdad()) && comprobarPasswd(jugador.getPasswd());
+                    System.out.println(correcto);
+                    outputStream.writeObject(correcto);
+                }
+                //Almacenar los datos en la bd
+                new BBDD().crearJugadorNuevo(jugador);
+                usuarioJugador = jugador.getUser();
+            }
+
+
+            String bienvenida = "Bienvenido jugador " + usuarioJugador;
             outputStream.writeObject(bienvenida);
-            /*do {
-                //Recibe los datos del jugador
+            System.out.println("        -->Conectado el jugador " + usuarioJugador);
 
-                if (!comprobarNombre(jugador.getNombre()) || !comprobarApellido(jugador.getApellido()) || !comprobarEdad(jugador.getEdad()) || !comprobarUsuario(jugador.getUser()) || !comprobarPasswd(jugador.getPasswd())){
-                    err = false;
-                } else {
-                    err = true;
-                }
-                *//*if (!comprobarNombre(jugador.getNombre())){
-                    error += "el nombre ";
-                }
-                if (!comprobarApellido(jugador.getApellido())){
-                    error += "el apellido ";
-                }
-                if (!comprobarEdad(jugador.getEdad())){
-                    error += "la edad ";
-                }
-                if (!comprobarUsuario(jugador.getUser())){
-                    error += "el usuario ";
-                }
-                if (!comprobarPasswd(jugador.getPasswd())){
-                    error += "la contraseña";
-                }
-                if (error.equalsIgnoreCase("")){
-                    error = "Datos correctos";
-                }
-                //Envía si hay algun error con algún dato
-                outputStream.writeObject(error);*//*
-            } *//*while (error.equalsIgnoreCase("Datos correctos"));*//*
-            while (!err);
-*/
+
             String result = "";
-            //Enviar las reglas del juego firmadas, do while(!firmaVerificada)
+            //Enviar las reglas del juego firmadas
             do {
                 String reglas = "Las reglas del juego son las siguientes:\n" +
                         "   --> Vas a recibir una pregunta de matemáticas (una suma o una resta o una multiplicación), \n" +
@@ -83,11 +108,13 @@ public class HiloServidor extends Thread{
                     //System.out.println("Generando par de claves");
                     KeyPair par = generador.generateKeyPair();
 
-                    PublicKey publicKey= par.getPublic();
+                    PublicKey publicKey = par.getPublic();
                     PrivateKey privateKey = par.getPrivate();
 
+                    System.out.println("        -->Enviando la clave pública al jugador " + usuarioJugador);
                     //Se envía la clave pública
                     outputStream.writeObject(publicKey);
+                    System.out.println("        -->Enviando las reglas sin firmar al jugador " + usuarioJugador);
                     //Se envían las reglas sin firmar
                     outputStream.writeObject(reglas);
 
@@ -95,10 +122,12 @@ public class HiloServidor extends Thread{
                     dsa.initSign(privateKey);
                     dsa.update(reglas.getBytes());
                     byte[] firma = dsa.sign();
+                    System.out.println("        -->Enviando las reglas firmadas al jugador " + usuarioJugador);
                     //Se envían las reglas firmadas
                     outputStream.writeObject(firma);
                     //recibe si se han verificado las reglas
                     result = inputStream.readObject().toString();
+                    System.out.println("        -->El jugador " + usuarioJugador + " responde " + result + " las reglas");
 
                 } catch (NoSuchAlgorithmException | SignatureException | InvalidKeyException e) {
                     e.printStackTrace();
@@ -111,28 +140,29 @@ public class HiloServidor extends Thread{
             String resultado = "", pregunta;
             int operacion;
             Random r = new Random();
-            int num1, num2, res, dev = 0, total = 0;
 
 
             do {
-                operacion = r.nextInt(2);
-                switch (operacion){
+                operacion = r.nextInt(3);
+                switch (operacion) {
                     case 0:
-                        System.out.println("Suma");
                         num1 = r.nextInt(150);
                         num2 = r.nextInt(150);
-                        System.out.println("Suma " + num1 + " + " + num2 + " y envía el resultado");
                         res = num1 + num2;
-                        pregunta = "Suma " + num1 + " + " + num2 + " y envía el resultado";
+                        System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
+                                usuarioJugador + " Suma " + num1 + " + " + num2 + " el rsultado correcto es " + res);
+                        pregunta = "Suma " + num1 + " + " + num2 + " y envía el resultado, para salir escribe 'end'";
                         //Envia la operación
                         outputStream.writeObject(pregunta);
                         //Recibe el resultado
                         resultado = inputStream.readObject().toString();
-                        if (!resultado.equalsIgnoreCase("end")){
+                        if (!resultado.equalsIgnoreCase("end")) {
                             dev = Integer.parseInt(resultado);
-                            if ( res == dev){
+                            if (res == dev) {
+                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
                                 total += 10;
                             } else {
+                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
                                 total -= 5;
                             }
                             contador += 1;
@@ -140,42 +170,46 @@ public class HiloServidor extends Thread{
 
                         break;
                     case 1:
-                        System.out.println("Resta");
                         num1 = r.nextInt(100);
                         num2 = r.nextInt(100);
-                        System.out.println("Resta " + num1 + " - " + num2 + " y envía el resultado");
                         res = num1 - num2;
-                        pregunta = "Resta " + num1 + " - " + num2 + " y envía el resultado";
+                        System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
+                                usuarioJugador + " Resta " + num1 + " - " + num2 + " el resultado correcto es " + res);
+                        pregunta = "Resta " + num1 + " - " + num2 + " y envía el resultado, para salir escribe 'end'";
                         //Envia la operación
                         outputStream.writeObject(pregunta);
                         //Recibe el resultado
                         resultado = inputStream.readObject().toString();
-                        if (!resultado.equalsIgnoreCase("end")){
+                        if (!resultado.equalsIgnoreCase("end")) {
                             dev = Integer.parseInt(resultado);
-                            if ( res == dev){
+                            if (res == dev) {
+                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
                                 total += 10;
                             } else {
+                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
                                 total -= 5;
                             }
                             contador += 1;
                         }
                         break;
                     case 2:
-                        System.out.println("Multiplicación");
                         num1 = r.nextInt(50);
                         num2 = r.nextInt(50);
-                        System.out.println("Multiplica " + num1 + " * " + num2 + " y envía el resultado");
                         res = num1 * num2;
-                        pregunta = "Multiplica " + num1 + " * " + num2 + " y envía el resultado";
+                        System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
+                                usuarioJugador + " Multiplica " + num1 + " * " + num2 + " el resultado correcto es " + res);
+                        pregunta = "Multiplica " + num1 + " * " + num2 + " y envía el resultado, para salir escribe 'end'";
                         //Envia la operación
                         outputStream.writeObject(pregunta);
                         //Recibe el resultado
                         resultado = inputStream.readObject().toString();
-                        if (!resultado.equalsIgnoreCase("end")){
+                        if (!resultado.equalsIgnoreCase("end")) {
                             dev = Integer.parseInt(resultado);
-                            if ( res == dev){
+                            if (res == dev) {
+                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
                                 total += 10;
                             } else {
+                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
                                 total -= 5;
                             }
                             contador += 1;
@@ -188,42 +222,34 @@ public class HiloServidor extends Thread{
             } while (!resultado.equalsIgnoreCase("end") || contador >= 10);
 
 
-            System.out.println("Puntuación total --> " + total);
+            System.out.println("        -->Puntuación total del jugador " + usuarioJugador + " --> " + total);
             //Enviar la puntuación total
             outputStream.writeObject(total);
 
+            System.out.println("        -->Terminada la partida del jugador " + usuarioJugador);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
 
 
     }
-    public boolean comprobarNombre(String nombre){
-        Pattern pattern = Pattern.compile("[a-zA-z]{4,20}");
+
+    public boolean comprobarString(String nombre) {
+        Pattern pattern = Pattern.compile("[a-zA-z]{4,40}");
         Matcher matcher;
         matcher = pattern.matcher(nombre);
         return matcher.find();
     }
-    public boolean comprobarApellido(String apellido){
-        Pattern pattern = Pattern.compile("[a-zA-z]{4,40}");
-        Matcher matcher;
-        matcher = pattern.matcher(apellido);
-        return matcher.find();
-    }
-    public boolean comprobarEdad(int edad){
-        Pattern pattern = Pattern.compile("[0-9]{2}");
+
+    public boolean comprobarEdad(int edad) {
+        Pattern pattern = Pattern.compile("[0-9]{1,2}");
         Matcher matcher;
         matcher = pattern.matcher(String.valueOf(edad));
         return matcher.find();
     }
-    public boolean comprobarUsuario(String nick){
-        Pattern pattern = Pattern.compile("[a-zA-z0-9]{4,20}");
-        Matcher matcher;
-        matcher = pattern.matcher(nick);
-        return matcher.find();
-    }
-    public boolean comprobarPasswd(String passwd){
-        Pattern pattern = Pattern.compile("[a-zA-z0-9]{10,25}");
+
+    public boolean comprobarPasswd(String passwd) {
+        Pattern pattern = Pattern.compile("[a-zA-z0-9]{4,25}");
         Matcher matcher;
         matcher = pattern.matcher(passwd);
         return matcher.find();

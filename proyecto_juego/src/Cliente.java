@@ -18,60 +18,72 @@ public class Cliente {
             System.out.println("Cliente encendido");
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-
-            String mensaje = in.readObject().toString();
             Scanner scanner = new Scanner(System.in);
-            String nombre, apellido, usuario, contrasenia, error;
+            String nombre, apellido, usuario, contrasenia, comprobacion;
             int edad;
-            //Recibe un mensaje pidiendo los datos del jugador
-            System.out.println(mensaje);
-            boolean err;
             Jugador jugador;
-            System.out.println("Escribe el nombre: ");
-            nombre = scanner.nextLine();
-            System.out.println("Escribe el apellido: ");
-            apellido = scanner.nextLine();
-            System.out.println("Escribe la edad: ");
-            edad = Integer.parseInt(scanner.nextLine());
-            System.out.println("Escribe el usuario: ");
-            usuario = scanner.nextLine();
-            System.out.println("Escribe la contraseña: ");
-            contrasenia = scanner.nextLine();
 
-            jugador = new Jugador(nombre, apellido, edad, usuario, contrasenia);
-            //Envía los datos del jugador
-            out.writeObject(jugador);
+            String inicioSesion = in.readObject().toString();
+            System.out.println(inicioSesion);
+            String resp = scanner.nextLine();
+            out.writeObject(resp);
+            boolean correcto = false;
+            if (resp.equalsIgnoreCase("s")){
+                while (!correcto) {
+                    String datos = in.readObject().toString();
+                    System.out.println(datos);
+                    System.out.println("Usuario");
+                    usuario = scanner.nextLine();
+                    System.out.println("Contraseña");
+                    contrasenia = scanner.nextLine();
+                    jugador = new Jugador(usuario, contrasenia);
+                    out.writeObject(jugador);
+                    comprobacion = in.readObject().toString();
+                    if (comprobacion.equalsIgnoreCase("true")){
+                        correcto = true;
+                    }else {
+                        correcto = false;
+                    }
+                }
+            }else if (resp.equalsIgnoreCase("n")){
+                while (!correcto) {
+                    String mensaje = in.readObject().toString();
+                    //Recibe un mensaje pidiendo los datos del jugador
+                    System.out.println(mensaje);
+
+                    System.out.println("Escribe el nombre: ");
+                    nombre = scanner.nextLine();
+                    out.writeObject(nombre);
+
+                    System.out.println("Escribe el apellido: ");
+                    apellido = scanner.nextLine();
+                    out.writeObject(apellido);
+
+                    System.out.println("Escribe la edad: ");
+                    edad = Integer.parseInt(scanner.nextLine());
+                    out.writeObject(edad);
+
+                    System.out.println("Escribe el usuario: ");
+                    usuario = scanner.nextLine();
+                    out.writeObject(usuario);
+
+                    System.out.println("Escribe la contraseña: ");
+                    contrasenia = scanner.nextLine();
+                    out.writeObject(contrasenia);
+
+
+                    comprobacion = in.readObject().toString();
+                    correcto = comprobacion.equalsIgnoreCase("true");
+                }
+            }
 
             String bienvenida = in.readObject().toString();
             System.out.println(bienvenida);
 
-            /*do {
-
-                System.out.println("Escribe el nombre: \n");
-                nombre = scanner.nextLine();
-                System.out.println("Escribe el apellido: \n");
-                apellido = scanner.nextLine();
-                System.out.println("Escribe la edad: \n");
-                edad = Integer.parseInt(scanner.nextLine());
-                System.out.println("Escribe el usuario: \n");
-                usuario = scanner.nextLine();
-                System.out.println("Escribe la contraseña: \n");
-                contrasenia = scanner.nextLine();
-
-                jugador = new Jugador(nombre, apellido, edad, usuario, contrasenia);
-                //Envía los datos del jugador
-                out.writeObject(jugador);
-
-                //Recibe si hay algún error con algun dato
-                //error = in.readObject().toString();
-                err = (boolean) in.readObject();
-
-            } while (!err);
-*/
             String respuesta = "";
             do {
                 try {
-                    //Comprobar si está bien escrito todo
+
                     //Se recibe la clave pública
                     PublicKey publicKey = (PublicKey) in.readObject();
                     //Recibe las reglas sin firmar
@@ -85,7 +97,7 @@ public class Cliente {
 
                     boolean check = verificarDsa.verify(firma);
 
-                    if (check){
+                    if (check) {
                         System.out.println("Firma verificada");
                         respuesta = "verificado";
                         System.out.println(mens);
@@ -107,7 +119,7 @@ public class Cliente {
                 operacion = in.readObject().toString();
                 System.out.println(operacion + "\n Tu respuesta es:");
                 resultado = scanner.nextLine();
-                if (!resultado.equalsIgnoreCase("end")){
+                if (!resultado.equalsIgnoreCase("end")) {
                     contador += 1;
                 }
                 //Envia la respuesta
@@ -115,13 +127,13 @@ public class Cliente {
 
             } while (!resultado.equalsIgnoreCase("end") || contador >= 10);
 
-            String puntuacion;
 
             //Recibe la puntuación total
-            puntuacion = in.readObject().toString();
+            String puntuacion = in.readObject().toString();
 
-            System.out.println(puntuacion);
+            System.out.println("La puntuación total conseguida es: " + puntuacion);
 
+            System.out.println("Fin de la partida");
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }

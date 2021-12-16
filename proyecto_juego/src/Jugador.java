@@ -2,6 +2,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public class Jugador implements Serializable {
+    private int id;
     private String nombre;
     private String apellido;
     private int edad;
@@ -14,6 +15,22 @@ public class Jugador implements Serializable {
         this.edad = edad;
         this.user = user;
         this.passwd = passwd;
+    }
+
+    public Jugador() {
+    }
+
+    public Jugador(String user, String passwd) {
+        this.user = user;
+        this.passwd = passwd;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
     }
 
     public String getNombre() {
