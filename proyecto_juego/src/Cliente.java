@@ -1,3 +1,4 @@
+import javax.crypto.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -28,7 +29,7 @@ public class Cliente {
             String resp = scanner.nextLine();
             out.writeObject(resp);
             boolean correcto = false;
-            if (resp.equalsIgnoreCase("s")){
+            if (resp.equalsIgnoreCase("s")) {
                 while (!correcto) {
                     String datos = in.readObject().toString();
                     System.out.println(datos);
@@ -39,13 +40,13 @@ public class Cliente {
                     jugador = new Jugador(usuario, contrasenia);
                     out.writeObject(jugador);
                     comprobacion = in.readObject().toString();
-                    if (comprobacion.equalsIgnoreCase("true")){
+                    if (comprobacion.equalsIgnoreCase("true")) {
                         correcto = true;
-                    }else {
+                    } else {
                         correcto = false;
                     }
                 }
-            }else if (resp.equalsIgnoreCase("n")){
+            } else if (resp.equalsIgnoreCase("n")) {
                 while (!correcto) {
                     String mensaje = in.readObject().toString();
                     //Recibe un mensaje pidiendo los datos del jugador
@@ -112,21 +113,34 @@ public class Cliente {
                 }
             } while (respuesta.equalsIgnoreCase("no verificado"));
             String resultado, operacion;
-            int contador = 0;
 
-            do {
-                //Recibe la operación
-                operacion = in.readObject().toString();
-                System.out.println(operacion + "\n Tu respuesta es:");
-                resultado = scanner.nextLine();
-                if (!resultado.equalsIgnoreCase("end")) {
-                    contador += 1;
-                }
-                //Envia la respuesta
-                out.writeObject(resultado);
 
-            } while (!resultado.equalsIgnoreCase("end") || contador >= 10);
+            try {
+                SecretKey key = (SecretKey) in.readObject();
+                System.out.println("La clave es --> " + key);
+                Cipher descipher = Cipher.getInstance("DES");
 
+                descipher.init(Cipher.DECRYPT_MODE, key);
+                byte[] mensaje_cifrado;
+
+
+                do {
+                    //Recibe la operación cifrada y se descifra antes de mostrarlo por consola
+                    mensaje_cifrado = (byte[])  in.readObject();
+                    operacion = new String(descipher.doFinal(mensaje_cifrado));
+                    //operacion = in.readObject().toString();
+                    System.out.println(operacion + "\n Tu respuesta es:");
+                    resultado = scanner.nextLine();
+                    //Envia la respuesta
+                    out.writeObject(resultado);
+
+                } while (!resultado.equalsIgnoreCase("end"));
+
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+                System.out.println("Error");
+            } catch (InvalidKeyException e) {
+                System.out.println("Error con la clave");
+            }
 
             //Recibe la puntuación total
             String puntuacion = in.readObject().toString();

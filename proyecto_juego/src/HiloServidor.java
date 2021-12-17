@@ -1,3 +1,4 @@
+import javax.crypto.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -24,7 +25,6 @@ public class HiloServidor extends Thread {
         try {
             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
-            int contador = 0;
 
             Jugador jugador = new Jugador();
             int num1, num2, res, dev, total = 0;
@@ -34,14 +34,14 @@ public class HiloServidor extends Thread {
             outputStream.writeObject(inicioSesion);
             String resp = inputStream.readObject().toString();
             boolean correcto = false;
-            if (resp.equalsIgnoreCase("s")){
+            if (resp.equalsIgnoreCase("s")) {
                 while (!correcto) {
                     String datos = "Introduce el usuario y la contraseña";
                     outputStream.writeObject(datos);
 
                     jugador = (Jugador) inputStream.readObject();
                     String contr = new BBDD().mirarPassword(jugador.getUser());
-                    if (contr.equalsIgnoreCase(jugador.getPasswd())){
+                    if (contr.equalsIgnoreCase(jugador.getPasswd())) {
                         correcto = true;
                     } else {
                         correcto = false;
@@ -51,7 +51,7 @@ public class HiloServidor extends Thread {
                 //Comprobar contraseña
                 //Preguntar mientras la contraseña sea incorrecta
                 usuarioJugador = jugador.getUser();
-            } else if (resp.equalsIgnoreCase("n")){
+            } else if (resp.equalsIgnoreCase("n")) {
                 while (!correcto) {
                     String conectar = "Devuelve los siguientes datos: nombre, apellido, edad, usuario y contraseña";
                     outputStream.writeObject(conectar);
@@ -142,85 +142,110 @@ public class HiloServidor extends Thread {
             Random r = new Random();
 
 
-            do {
-                operacion = r.nextInt(3);
-                switch (operacion) {
-                    case 0:
-                        num1 = r.nextInt(150);
-                        num2 = r.nextInt(150);
-                        res = num1 + num2;
-                        System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
-                                usuarioJugador + " Suma " + num1 + " + " + num2 + " el rsultado correcto es " + res);
-                        pregunta = "Suma " + num1 + " + " + num2 + " y envía el resultado, para salir escribe 'end'";
-                        //Envia la operación
-                        outputStream.writeObject(pregunta);
-                        //Recibe el resultado
-                        resultado = inputStream.readObject().toString();
-                        if (!resultado.equalsIgnoreCase("end")) {
-                            dev = Integer.parseInt(resultado);
-                            if (res == dev) {
-                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
-                                total += 10;
-                            } else {
-                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
-                                total -= 5;
-                            }
-                            contador += 1;
-                        }
+            try {
+                KeyGenerator keyGenerator;
+                Cipher cipher;
+                byte[] mensaje_cifrado;
 
-                        break;
-                    case 1:
-                        num1 = r.nextInt(100);
-                        num2 = r.nextInt(100);
-                        res = num1 - num2;
-                        System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
-                                usuarioJugador + " Resta " + num1 + " - " + num2 + " el resultado correcto es " + res);
-                        pregunta = "Resta " + num1 + " - " + num2 + " y envía el resultado, para salir escribe 'end'";
-                        //Envia la operación
-                        outputStream.writeObject(pregunta);
-                        //Recibe el resultado
-                        resultado = inputStream.readObject().toString();
-                        if (!resultado.equalsIgnoreCase("end")) {
-                            dev = Integer.parseInt(resultado);
-                            if (res == dev) {
-                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
-                                total += 10;
-                            } else {
-                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
-                                total -= 5;
-                            }
-                            contador += 1;
-                        }
-                        break;
-                    case 2:
-                        num1 = r.nextInt(50);
-                        num2 = r.nextInt(50);
-                        res = num1 * num2;
-                        System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
-                                usuarioJugador + " Multiplica " + num1 + " * " + num2 + " el resultado correcto es " + res);
-                        pregunta = "Multiplica " + num1 + " * " + num2 + " y envía el resultado, para salir escribe 'end'";
-                        //Envia la operación
-                        outputStream.writeObject(pregunta);
-                        //Recibe el resultado
-                        resultado = inputStream.readObject().toString();
-                        if (!resultado.equalsIgnoreCase("end")) {
-                            dev = Integer.parseInt(resultado);
-                            if (res == dev) {
-                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
-                                total += 10;
-                            } else {
-                                System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
-                                total -= 5;
-                            }
-                            contador += 1;
-                        }
-                        break;
-                    default:
-                        break;
-                }
 
-            } while (!resultado.equalsIgnoreCase("end") || contador >= 10);
+                keyGenerator = KeyGenerator.getInstance("DES");
 
+                SecretKey key = keyGenerator.generateKey();
+
+                cipher = Cipher.getInstance("DES");
+                cipher.init(Cipher.ENCRYPT_MODE, key);
+
+                System.out.println("        -->Enviando la clave"+ key +" al jugador " + usuarioJugador );
+
+                outputStream.writeObject(key);
+
+                do {
+                    operacion = r.nextInt(3);
+                    switch (operacion) {
+                        case 0:
+                            num1 = r.nextInt(150);
+                            num2 = r.nextInt(150);
+                            res = num1 + num2;
+                            System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
+                                    usuarioJugador + " Suma " + num1 + " + " + num2 + " el rsultado correcto es " + res);
+                            pregunta = "Suma " + num1 + " + " + num2 + " y envía el resultado, para salir escribe 'end'";
+                            //Cifrar el mensaje
+                            mensaje_cifrado = cipher.doFinal(pregunta.getBytes());
+                            //Envia la operación
+                            outputStream.writeObject(mensaje_cifrado);
+                            //Recibe el resultado
+                            resultado = inputStream.readObject().toString();
+                            if (!resultado.equalsIgnoreCase("end")) {
+                                dev = Integer.parseInt(resultado);
+                                if (res == dev) {
+                                    System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
+                                    total += 10;
+                                } else {
+                                    System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
+                                    total -= 5;
+                                }
+                            }
+
+                            break;
+                        case 1:
+                            num1 = r.nextInt(100);
+                            num2 = r.nextInt(100);
+                            res = num1 - num2;
+                            System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
+                                    usuarioJugador + " Resta " + num1 + " - " + num2 + " el resultado correcto es " + res);
+                            pregunta = "Resta " + num1 + " - " + num2 + " y envía el resultado, para salir escribe 'end'";
+                            //Cifrar el mensaje
+                            mensaje_cifrado = cipher.doFinal(pregunta.getBytes());
+                            //Envia la operación
+                            outputStream.writeObject(mensaje_cifrado);
+                            //Recibe el resultado
+                            resultado = inputStream.readObject().toString();
+                            if (!resultado.equalsIgnoreCase("end")) {
+                                dev = Integer.parseInt(resultado);
+                                if (res == dev) {
+                                    System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
+                                    total += 10;
+                                } else {
+                                    System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
+                                    total -= 5;
+                                }
+                            }
+                            break;
+                        case 2:
+                            num1 = r.nextInt(50);
+                            num2 = r.nextInt(50);
+                            res = num1 * num2;
+                            System.out.println("        -->Enviando pregunta al jugador " + usuarioJugador + "\n" +
+                                    usuarioJugador + " Multiplica " + num1 + " * " + num2 + " el resultado correcto es " + res);
+                            pregunta = "Multiplica " + num1 + " * " + num2 + " y envía el resultado, para salir escribe 'end'";
+                            //Cifrar el mensaje
+                            mensaje_cifrado = cipher.doFinal(pregunta.getBytes());
+                            //Envia la operación
+                            outputStream.writeObject(mensaje_cifrado);
+                            //Recibe el resultado
+                            resultado = inputStream.readObject().toString();
+                            if (!resultado.equalsIgnoreCase("end")) {
+                                dev = Integer.parseInt(resultado);
+                                if (res == dev) {
+                                    System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es correcta");
+                                    total += 10;
+                                } else {
+                                    System.out.println("        --> La respuesta del jugador " + usuarioJugador + " es incorrecta");
+                                    total -= 5;
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+
+                } while (!resultado.equalsIgnoreCase("end"));
+
+            } catch (NoSuchAlgorithmException | NoSuchPaddingException | IllegalBlockSizeException | BadPaddingException e) {
+                System.out.println("Error");
+            } catch (InvalidKeyException e) {
+                System.out.println("Error con la clave");
+            }
 
             System.out.println("        -->Puntuación total del jugador " + usuarioJugador + " --> " + total);
             //Enviar la puntuación total
