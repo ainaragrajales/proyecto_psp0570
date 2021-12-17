@@ -85,4 +85,12 @@ public class Jugador implements Serializable {
     public int hashCode() {
         return Objects.hash(nombre, apellido, edad, user, passwd);
     }
+
+    @Override
+    public String toString() {
+        return "Jugador llamado: "+ nombre + " " + apellido +
+                " cuya edad es " + edad +
+                ", su usuario es " + user +
+                " y su passwd es " + passwd;
+    }
 }

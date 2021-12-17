@@ -4,6 +4,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.security.*;
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -19,16 +20,20 @@ public class HiloServidor extends Thread {
     @Override
     public void run() {
 
+        System.out.println("Mostrando todos los jugadores creados");
+        ArrayList<Jugador> listaJugadores = new BBDD().listaJugadores();
+        for (Jugador jugador: listaJugadores) {
+            System.out.println(jugador.toString());
+        }
+        System.out.println("\n\n\n");
         String usuarioJugador = "";
-        // igual se puede hacer un login con base de datos sqlite y se pregunta si tiene ya cuenta o quiere crear una,
-        // además de comprobar que el mismo jugador no esté en dos partidas a la vez
+
         try {
             ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
 
             Jugador jugador = new Jugador();
             int num1, num2, res, dev, total = 0;
-
 
             String inicioSesion = "¿Tienes cuenta creada? s/n";
             outputStream.writeObject(inicioSesion);
@@ -56,6 +61,7 @@ public class HiloServidor extends Thread {
                     String conectar = "Devuelve los siguientes datos: nombre, apellido, edad, usuario y contraseña";
                     outputStream.writeObject(conectar);
 
+                    System.out.println("Datos del jugador a crear:");
                     jugador.setNombre(inputStream.readObject().toString());
                     System.out.println(jugador.getNombre());
 
@@ -71,8 +77,6 @@ public class HiloServidor extends Thread {
                     jugador.setPasswd(inputStream.readObject().toString());
                     System.out.println(jugador.getPasswd());
 
-                    //jugador = (Jugador) inputStream.readObject();
-
                     //Comprobar con los patrones si los datos son correctos
                     correcto = comprobarString(jugador.getNombre()) && comprobarString(jugador.getApellido()) &&
                             comprobarString(jugador.getUser()) && comprobarEdad(jugador.getEdad()) && comprobarPasswd(jugador.getPasswd());
@@ -82,6 +86,7 @@ public class HiloServidor extends Thread {
                 //Almacenar los datos en la bd
                 new BBDD().crearJugadorNuevo(jugador);
                 usuarioJugador = jugador.getUser();
+                System.out.println("Jugador creado");
             }
 
 
@@ -141,13 +146,10 @@ public class HiloServidor extends Thread {
             int operacion;
             Random r = new Random();
 
-
             try {
                 KeyGenerator keyGenerator;
                 Cipher cipher;
                 byte[] mensaje_cifrado;
-
-
                 keyGenerator = KeyGenerator.getInstance("DES");
 
                 SecretKey key = keyGenerator.generateKey();
@@ -156,7 +158,6 @@ public class HiloServidor extends Thread {
                 cipher.init(Cipher.ENCRYPT_MODE, key);
 
                 System.out.println("        -->Enviando la clave"+ key +" al jugador " + usuarioJugador );
-
                 outputStream.writeObject(key);
 
                 do {
