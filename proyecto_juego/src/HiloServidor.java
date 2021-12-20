@@ -102,7 +102,6 @@ public class HiloServidor extends Thread {
                         "   --> Vas a recibir una pregunta de matemáticas (una suma o una resta o una multiplicación), \n" +
                         "       vas a tener que  responder con el resultado de la operación, si la respuesta es correcta obtendrás 10 puntos, si es incorrecta se restarán 5 puntos.\n" +
                         "   --> En cualquier momento puedes escribir por teclado 'end' para terminar la partida.\n" +
-                        "   --> Una partida consta de 10 rondas de preguntas.\n" +
                         "¡Disfruta del juego!!!\n";
 
                 try {
